@@ -20,9 +20,15 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci --ignore-scripts --omit=dev --no-audit --no-fund
-      - run: node --test tests/property-refresh.test.mjs
+      - id: tests
+        run: node --test tests/*.test.mjs
       - name: Refresh approved sources
         run: node scripts/run-cloud.mjs --cloud --apply
+        env:
+          PROPERTY_REFRESH_DATABASE_URL: ${{ secrets.PROPERTY_REFRESH_DATABASE_URL }}
+      - name: Discover bounded review candidates
+        if: ${{ !cancelled() && steps.tests.outcome == 'success' }}
+        run: node scripts/discover-cloud.mjs
         env:
           PROPERTY_REFRESH_DATABASE_URL: ${{ secrets.PROPERTY_REFRESH_DATABASE_URL }}
       - name: Numerical run summary
