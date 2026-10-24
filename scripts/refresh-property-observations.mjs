@@ -86,5 +86,6 @@ try{
  const report={checkedAt:now.toISOString(),mode:apply?'apply':fixtures?'fixtures':'dry-run',dataCostCHF:0,counts:results.reduce((a,r)=>(a[r.state]=(a[r.state]||0)+1,a),{}),priceChanges:results.filter(r=>r.observation).length,results};
  const filename='refresh-'+now.toISOString().replace(/[:.]/g,'-')+'.json';fs.writeFileSync(path.join(reportDirectory,filename),JSON.stringify(report,null,2));fs.writeFileSync(path.join(reportDirectory,'refresh-latest.json'),JSON.stringify(report,null,2));
  console.log(JSON.stringify({checkedAt:report.checkedAt,mode:report.mode,counts:report.counts,priceChanges:report.priceChanges,report:filename}));
- if(results.some(r=>r.state==='error'))process.exitCode=2;
+ // A cloud run that cannot see an explicitly imported manifest item is incomplete.
+ if(results.some(r=>r.state==='error'||cloud&&r.state==='skipped'))process.exitCode=2;
 }finally{fs.closeSync(handle);fs.unlinkSync(lock);}
