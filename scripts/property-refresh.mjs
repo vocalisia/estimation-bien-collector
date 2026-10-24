@@ -20,17 +20,20 @@ function values(text,patterns){
 }
 export function extractListingFacts(html,previous,contract={}) {
   const fail=(reason,details)=>({state:'review',reason,...(details?{details}: {})});
+  if(contract.identityToken&&!htmlText(html).includes(contract.identityToken))return fail('IDENTITY_NOT_CONFIRMED');
   const canonical=html.match(/<link\b(?=[^>]*\brel=["']canonical["'])[^>]*\bhref=["']([^"']+)/i)?.[1];
   if((!canonical||canonicalURL(canonical)!==canonicalURL(previous.source))&&!(contract.identityToken&&htmlText(html).includes(contract.identityToken)))return fail('CANONICAL_MISMATCH');
   const raw=(html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)?.[1]||html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1]||html)
     .replace(/<(?:header|nav|footer)\b[^>]*>[\s\S]*?<\/(?:header|nav|footer)>/gi,' ')
-    .split(/Biens similaires|Objets similaires|Ces biens pourraient|Vous pourriez aussi|Nos autres biens|Propriétés similaires/i)[0];
-  let text=htmlText(raw).split(/Biens similaires|Objets similaires|Ces biens pourraient|Vous pourriez aussi|Nos autres biens|Propriétés similaires/i)[0];
+    .split(/Nos biens similaires|Biens similaires|Objets similaires|Ces biens pourraient|Vous pourriez aussi|Nos autres biens|Propriétés similaires/i)[0];
+  let text=htmlText(raw).split(/Nos biens similaires|Biens similaires|Objets similaires|Ces biens pourraient|Vous pourriez aussi|Nos autres biens|Propriétés similaires/i)[0];
   const heading=htmlText(raw.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i)?.[1]||'');
   const inactiveBadge=/<(?:span|div|p|strong)\b[^>]*>\s*(?:vendu|réservé|retiré|sold|reserved)\s*<\//iu.test(raw);
   if(inactiveBadge||/(?:^|[^\p{L}])(?:vendu|réservé|retiré|sold|reserved)(?:$|[^\p{L}])/iu.test(heading)||/Vente sur plans|vendu(?:e)? sur plans|chantier (?:est )?en cours|en cours de construction/i.test(text))return fail('NOT_EXISTING_ACTIVE_OFFER');
-  const town=previous.municipalityId===5586?'Lausanne':previous.municipalityId===5938?'Yverdon-les-Bains':null;
+  const town=({5586:'Lausanne',5938:'Yverdon-les-Bains',5724:'Nyon',5721:'Gland',6621:'Genève'})[previous.municipalityId];
   if(!town||!text.slice(0,1800).includes(town))return fail('LOCATION_NOT_CONFIRMED');
+  if(contract.locationPattern&&!new RegExp(contract.locationPattern,'iu').test(text))return fail('LOCATION_NOT_CONFIRMED');
+  if(contract.activePattern&&!new RegExp(contract.activePattern,'iu').test(text))return fail('ACTIVE_OFFER_NOT_CONFIRMED');
   // Read labels, not bare m² or a sum of balconies/parking. The first labelled
   // price is the primary asking price; smaller annex prices never substitute it.
   const prices=values(contract.priceFromBody?htmlText(html):text,contract.pricePattern?[contract.pricePattern]:[`(?:Prix\\s*(?:[\\u200b-\\u200d]|\\s)*de vente|Prix de l'objet|Prix:)\\s*(?:CHF\\s*)?${amount}`,`CHF\\s*${amount}(?=\\s*(?:[.–-]|CHF|[A-Za-zÉ]|$))`,`Prix\\s+${amount}\\.-`]);

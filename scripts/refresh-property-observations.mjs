@@ -26,7 +26,8 @@ try{
  if(!Array.isArray(policies)||!manifest)throw Error('Refresh configuration absent');
  if(!Array.isArray(manifest.listings)||manifest.listings.length>64)throw Error('Manifest exceeds64 explicit listings');
  if(onlySource&&!manifest.listings.some(c=>c.source===onlySource))throw Error('Source is not in the reviewed manifest');
- const rows=fixtures?JSON.parse(fs.readFileSync('.private/free-market/refresh-baseline-20261018.json','utf8')).rows:(await sql.query('SELECT payload FROM valuation_property_observations WHERE municipality_id IN (5586,5938)')).map(r=>r.payload);
+ const reviewedSources=manifest.listings.map(c=>canonicalURL(c.source)).filter(Boolean);
+ const rows=fixtures?JSON.parse(fs.readFileSync('.private/free-market/refresh-baseline-20261018.json','utf8')).rows:(await sql.query("SELECT payload FROM valuation_property_observations WHERE payload->>'source' IN (SELECT jsonb_array_elements_text($1::jsonb))",[JSON.stringify(reviewedSources)])).map(r=>r.payload);
  const fixtureIndex=fixtures?JSON.parse(fs.readFileSync('.private/free-market/refresh-fixture-index.json','utf8')):[];
  const robots=new Map(),lastRequest=new Map(),results=[];
  const fetchPage=async url=>{

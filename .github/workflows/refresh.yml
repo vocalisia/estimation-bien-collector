@@ -31,6 +31,11 @@ jobs:
         run: node scripts/discover-cloud.mjs
         env:
           PROPERTY_REFRESH_DATABASE_URL: ${{ secrets.PROPERTY_REFRESH_DATABASE_URL }}
+      - name: Check reviewed official statistics
+        if: ${{ !cancelled() && steps.tests.outcome == 'success' }}
+        run: node scripts/check-official-cloud.mjs
+        env:
+          PROPERTY_REFRESH_DATABASE_URL: ${{ secrets.PROPERTY_REFRESH_DATABASE_URL }}
       - name: Numerical run summary
         if: always()
         run: node scripts/summary.mjs
